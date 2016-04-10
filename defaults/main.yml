@@ -1,0 +1,20 @@
+---
+hardenwebserver_type: apache2
+#hardenwebserver_type: nginx
+
+hardenwebserver_disable_http: true
+
+## if defined, restrict webserver listen interface
+## FIXME! only support one interface
+#hardenwebserver_bind: 192.168.1.1
+
+hardenwebserver_cert: selfsigned
+hardenwebserver_certinfo: '/C=US/ST=CA/L=San Francisco/O=Ansible'
+hardenwebserver_certduration: 1095
+## ???
+#hardenwebserver_cert: letsencrypt = separate role
+# https://community.letsencrypt.org/t/certificate-for-public-ip-without-domain-name/6082/5  NOK
+# https://github.com/thefinn93/ansible-letsencrypt
+# https://github.com/PeterMosmans/ansible-role-letsencrypt
+
+

@@ -1,0 +1,30 @@
+---
+
+- name: apt | nginx package install
+  apt: name={{item}} state=present update_cache=yes
+  with_items:
+    - nginx
+  when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+
+- name: nginx configuration file update
+  template: src=harden-cache
+    dest=/etc/nginx/conf.d/harden-cache
+    owner=0 group=0 mode=0644
+
+- include: certificate-selfsigned.yml
+  when: hardenwebserver_cert is defined and hardenwebserver_cert == 'selfsigned'
+
+- name: nginx https configuration
+  template: src=https-only
+    dest=/etc/nginx/sites-enabled/https
+    owner=0 group=0 mode=0644
+  notify:
+    - restart nginx
+  when: hardenwebserver_disable_http is defined and hardenwebserver_disable_http
+- name: nginx remove default site
+  file: dest=/etc/nginx/sites-enabled/default
+    state=absent
+  notify:
+    - restart nginx
+  when: hardenwebserver_disable_http is defined and hardenwebserver_disable_http
+
