@@ -27,7 +27,7 @@
     - restart apache
   when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
 
-# FIXME! 
+# FIXME!
 - name: active base rules
   file: src="/usr/share/modsecurity-crs/base_rules/{{ item }}" dest="{{ modsecurity_active }}/{{ item }}" state=link
 #  with_fileglob:
@@ -108,7 +108,7 @@
 - name: review modsecurity.conf (1)
   replace: "dest={{ modsecurity_conf }} regexp='{{ item.regexp }}' replace='{{ item.replace }}' backup=yes"
   with_items:
-    - { regexp: 'SecRuleEngine DetectionOnly', replace: 'SecRuleEngine On' }
+    - { regexp: 'SecRuleEngine .*', replace: "SecRuleEngine {{ hardenwebserver_apache_modsecurity_engine }}" }
     - { regexp: 'SecResponseBodyAccess On', replace: 'SecResponseBodyAccess Off' }
     - { regexp: 'SecAuditLogParts ABIJDEFHZ', replace: 'SecAuditLogParts ABCIJDEFHZ' }
   notify:
@@ -127,3 +127,9 @@
     - restart apache
   when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
 
+## http://owasp-modsecurity-core-rule-set.owasp.narkive.com/EMuDdaw9/syntax-error-on-line-51-of-etc-modsecurity-activated-rules-modsecurity-crs-16-session-hijacking-conf
+- name: syntax error fix for modsecurity session hijacking
+  replace: dest=/usr/share/modsecurity-crs/activated_rules/modsecurity_crs_16_session_hijacking.conf regexp='^        SecRule TX:1 ".*" "chain,t:sha1,t:hexEncode,setvar:session.ip_hash' replace='        SecRule TX:1 ".*" "t:sha1,t:hexEncode,setvar:session.ip_hash'
+  notify:
+    - restart apache
+  when: ansible_distribution == 'Ubuntu' and ansible_distribution_release == 'xenial'

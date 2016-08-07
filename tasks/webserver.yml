@@ -1,5 +1,7 @@
 ---
 
+- debug: var=hardenwebserver_type
+
 - include: apache.yml
   when: hardenwebserver_type is defined and hardenwebserver_type == 'apache2'
 

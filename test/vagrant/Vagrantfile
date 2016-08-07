@@ -14,15 +14,16 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
        #ansible.host_key_checking = false
        #ansible.limit = 'all'
        ansible.sudo = true
-       ansible.extra_vars = { ansible_ssh_user: 'vagrant' }
+#       ansible.extra_vars = { ansible_ssh_user: 'vagrant' }
+       ansible.extra_vars = { ansible_ssh_user: 'vagrant', hardenwebserver_type: 'nginx' }
        ansible.groups = {
-          "myrole" => ["vhost" ],
+          "myrole" => ["hardenwebserver" ],
        }
     end
 
-    config.vm.define "vhost" do |vhost|
-        vhost.vm.hostname = "vhost"
-        vhost.vm.provider "virtualbox" do |v|
+    config.vm.define "hardenwebserver" do |hardenwebserver|
+        hardenwebserver.vm.hostname = "hardenwebserver"
+        hardenwebserver.vm.provider "virtualbox" do |v|
           v.memory = 512
         end
     end

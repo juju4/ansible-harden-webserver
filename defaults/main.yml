@@ -2,6 +2,11 @@
 hardenwebserver_type: apache2
 #hardenwebserver_type: nginx
 
+hardenwebserver_apache_modsecurity_engine: 'DetectionOnly'
+#hardenwebserver_apache_modsecurity_engine: 'On'
+hardenwebserver_nginx_naxsi_learningmode: true
+#hardenwebserver_nginx_resolver: '$DNS-IP-1 $DNS-IP-2'
+
 hardenwebserver_disable_http: true
 
 ## if defined, restrict webserver listen interface
@@ -17,4 +22,6 @@ hardenwebserver_certduration: 1095
 # https://github.com/thefinn93/ansible-letsencrypt
 # https://github.com/PeterMosmans/ansible-role-letsencrypt
 
+hardenwebserver_cert_pinning: false
+hardenwebserver_cert_pinning_value: 'pin-sha256=\"eZ2mT3Q9rS+P5WO3beF1Du9Jojk2oaO3eM0BYjl+uKk=\"; pin-sha256=\"2RvDQRJ3jUJaIvGRBMATMgSMrTecA3HXQXeUgRFKIcc=\"; max-age=5184000; includeSubDomains'
 

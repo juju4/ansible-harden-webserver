@@ -54,3 +54,14 @@
     - restart apache
   when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
 
+## certificate pinning
+## extract hash with
+## $ openssl req -in server.csr -pubkey -noout | openssl rsa -pubin -outform der | openssl dgst -sha256 -binary | openssl enc -base64
+- name: Enable HTTP Public Key Pinning (HPKP)
+  lineinfile: dest="{{ apachesslconf }}" line="{{ item.n }}" insertafter="</VirtualHost>"
+  with_items:
+    - { n: '    Header always set Public-Key-Pins {{ hardenwebserver_cert_pinning_value }}' }
+  notify:
+    - restart apache
+  when: hardenwebserver_cert_pinning is defined and hardenwebserver_cert_pinning
+

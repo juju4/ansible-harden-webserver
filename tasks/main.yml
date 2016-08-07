@@ -1,4 +1,8 @@
 ---
 
--  include: webserver.yml
+- name: Include version-specific variables
+  include_vars: "{{ ansible_distribution }}.yml"
+
+- include: travis.yml
+- include: webserver.yml
 

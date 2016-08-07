@@ -1,76 +1,102 @@
 ---
 
-- name: apt | apache-security packages install
-  apt: name={{item}} state=present
+- name: restrict permissions on apache configuration dir
+  file: dest={{ apacheetc }} mode=0750 state=directory owner=root group={{ www_user }}
+- name: restrict permissions on few apache configuration files
+  file: dest={{ item }} mode=0640 state=file owner=root group={{ www_user }} follow=yes
   with_items:
-    - python-passlib
-    - apache2
-  when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
-- set_fact:
-    hardenwebserver_apachesecurityconf: /etc/apache2/conf-available/security.conf
+    - "{{ apache_confdir }}/security.conf"
+    - "{{ apachesslconf }}"
+    - "{{ apacheetc }}/apache2.conf"
+    - "{{ apacheetc }}/ports.conf"
+  ignore_errors: true
+
+- block:
+    ## headers for security.conf, reqtimeout for modsecurity slow attacks
+    # https://www.acunetix.com/blog/articles/slow-http-dos-attacks-mitigate-apache-http-server/
+    - name: Enabled extra modules
+      apache2_module: state=present name="{{ item }}"
+      with_items:
+        - headers
+        - reqtimeout
+      notify:
+        - restart apache
+    
+    - name: Enabled extra security - apache2.conf
+      replace: dest="{{ apacheetc }}/apache2.conf" regexp="{{ item.re }}" replace="{{ item.n }}" backup=yes
+      with_items:
+        - { re: '^\tOptions FollowSymLinks', n: '\tOptions SymLinksIfOwnerMatch' }
+        - { re: '^\tOptions Indexes FollowSymLinks', n: '\tOptions Indexes SymLinksIfOwnerMatch' }
+      notify:
+        - restart apache
+    
+    ## Note: commented headers can break some apps like nagios
+    - name: Enabled extra security headers - security.conf
+      replace: dest="{{ hardenwebserver_apachesecurityconf }}" regexp="{{ item.re }}" replace="{{ item.n }}" backup=yes
+      with_items:
+        - { re: '^#ServerTokens Minimal', n: 'ServerTokens Prod' }
+        - { re: '^ServerTokens OS', n: '#ServerTokens OS' }
+        - { re: '^#ServerSignature Off', n: 'ServerSignature Off' }
+        - { re: '^ServerSignature On', n: '#ServerSignature On' }
+        - { re: '^#Header set X-Content-Type-Options: "nosniff"', n: 'Header set X-Content-Type-Options: "nosniff"' }
+        - { re: '^#Header set X-Frame-Options: "sameorigin"', n: 'Header set X-Frame-Options: "sameorigin"' }
+    #    - { re: '^#Header set X-Frame-Options: "sameorigin"', n: 'Header set X-Frame-Options: "deny"' }
+      notify:
+        - restart apache
+    
+    ## https://www.owasp.org/index.php/List_of_useful_HTTP_headers
+    - name: Enabled extra security headers
+      lineinfile: dest="{{ hardenwebserver_apachesecurityconf }}" line="{{ item.n }}" backup=yes
+      with_items:
+        - { n: 'Header set Strict-Transport-Security "max-age=16070400; includeSubDomains"' }
+    #    - { n: 'Header always set Strict-Transport-Security "max-age=63072000; includeSubdomains; preload"' }
+        - { n: 'Header set X-XSS-Protection "1; mode=block"' }
+    #    - { n: 'Header set Content-Security-Policy "default-src self"' }
+      notify:
+        - restart apache
   when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
 
-- name: yum | apache-security packages install
-  yum: name={{item}} state=present
-  with_items:
-    - python-passlib
-    - httpd
+- block:
+    - name: Enabled extra security headers
+      lineinfile: >
+        dest="{{ hardenwebserver_apachesecurityconf }}"
+        line="{{ item }}"
+        create=yes
+      with_items:
+        - 'ServerTokens Prod'
+        - 'ServerSignature Off'
+        - 'Header set X-Content-Type-Options: "nosniff"'
+        - 'Header set X-Frame-Options: "sameorigin"'
+    #    - 'Header set X-Frame-Options: "deny"'
+    ## FIXME! problem w escaping ;
+    #    - 'Header set Strict-Transport-Security "max-age=16070400; includeSubDomains"'
+    #    - 'Header set X-XSS-Protection "1; mode=block"'
   when: ansible_os_family == "RedHat" or ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
-- set_fact:
-    hardenwebserver_apachesecurityconf: /etc/httpd/conf.d/security.conf
-  when: ansible_os_family == "RedHat" or ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
 
-## headers for security.conf, reqtimeout for modsecurity slow attacks
-# https://www.acunetix.com/blog/articles/slow-http-dos-attacks-mitigate-apache-http-server/
-- name: Enabled extra modules
-  apache2_module: state=present name="{{ item }}"
-  with_items:
-    - headers
-    - reqtimeout
-  notify:
-    - restart apache
-  when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
-
-## Note: commented headers can break some apps like nagios
-- name: Enabled extra security headers
-  replace: dest="{{ hardenwebserver_apachesecurityconf }}" regexp="{{ item.re }}" replace="{{ item.n }}"
-  with_items:
-    - { re: '^#ServerTokens Minimal', n: 'ServerTokens Minimal' }
-    - { re: '^ServerTokens OS', n: '#ServerTokens OS' }
-    - { re: '^#ServerSignature Off', n: 'ServerSignature Off' }
-    - { re: '^ServerSignature On', n: '#ServerSignature On' }
-    - { re: '^#Header set X-Content-Type-Options: "nosniff"', n: 'Header set X-Content-Type-Options: "nosniff"' }
-    - { re: '^#Header set X-Frame-Options: "sameorigin"', n: 'Header set X-Frame-Options: "sameorigin"' }
-#    - { re: '^#Header set X-Frame-Options: "sameorigin"', n: 'Header set X-Frame-Options: "deny"' }
-  notify:
-    - restart apache
-  when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
-
-## https://www.owasp.org/index.php/List_of_useful_HTTP_headers
-- name: Enabled extra security headers
-  lineinfile: dest="{{ hardenwebserver_apachesecurityconf }}" line="{{ item.n }}"
-  with_items:
-    - { n: 'Header set Strict-Transport-Security "max-age=16070400; includeSubDomains"' }
-#    - { n: 'Header always set Strict-Transport-Security "max-age=63072000; includeSubdomains; preload"' }
-    - { n: 'Header set X-XSS-Protection "1; mode=block"' }
-#    - { n: 'Header set Content-Security-Policy "default-src self"' }
-  notify:
-    - restart apache
-  when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
-
-- name: Enabled extra security headers
-  lineinfile: >
-    dest="{{ hardenwebserver_apachesecurityconf }}"
-    line="{{ item }}"
-    create=yes
-  with_items:
-    - 'ServerTokens Minimal'
-    - 'ServerSignature Off'
-    - 'Header set X-Content-Type-Options: "nosniff"'
-    - 'Header set X-Frame-Options: "sameorigin"'
-#    - 'Header set X-Frame-Options: "deny"'
-## FIXME! problem w escaping ;
-#    - 'Header set Strict-Transport-Security "max-age=16070400; includeSubDomains"'
-#    - 'Header set X-XSS-Protection "1; mode=block"'
-  when: ansible_os_family == "RedHat" or ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+- name: Deny usual dangerous files
+  blockinfile:
+    dest: "{{ hardenwebserver_apachesecurityconf }}"
+    marker: "# {mark} ANSIBLE MANAGED BLOCK"
+    block: |
+      ## Deny potentially sensitive files
+      <FilesMatch "^\.ht">
+           Order allow,deny
+           Deny from all
+           Satisfy all
+      </FilesMatch>
+      <FilesMatch "^\.">
+           Order allow,deny
+           Deny from all
+           Satisfy all
+      </FilesMatch>
+      <FilesMatch "\.(inc|old|svn|git|pub|sec|gpg)$">
+           Order allow,deny
+           Deny from all
+           Satisfy all
+      </FilesMatch>
+      <FilesMatch "/(?:upload|files|pub)/.*\.php$">
+           Order allow,deny
+           Deny from all
+           Satisfy all
+      </FilesMatch>
 

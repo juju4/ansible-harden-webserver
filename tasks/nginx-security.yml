@@ -1,30 +1,53 @@
 ---
 
-- name: apt | nginx package install
-  apt: name={{item}} state=present update_cache=yes
+- name: restrict permissions on nginx configuration dir
+  file: dest=/etc/nginx mode=0750 state=directory owner=root group={{ www_user }}
+- name: restrict permissions on few nginx configuration files
+  file: dest={{ item }} mode=0640 state=file owner=root group={{ www_user }} follow=yes
   with_items:
-    - nginx
-  when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+    - /etc/nginx/nginx.conf
 
 - name: nginx configuration file update
   template: src=harden-cache
-    dest=/etc/nginx/conf.d/harden-cache
+    dest={{ apache_confdir }}/harden-cache
     owner=0 group=0 mode=0644
+
+- name: review nginx main configuration
+  lineinfile: dest="/etc/nginx/nginx.conf" regexp="{{ item.re }}" line="{{ item.l }}" insertafter="http {" backup=yes
+  with_items:
+    - { re: '^\s*client_body_buffer_size', l: "\tclient_body_buffer_size 10k;" }
+    - { re: '^\s*client_max_body_size', l: "\tclient_max_body_size 5m;" }
+    - { re: '^\s*client_header_buffer_size', l: "\tclient_header_buffer_size 1k;" }
+    - { re: '^\s*large_client_header_buffers', l: "\tlarge_client_header_buffers 2 1k;" }
 
 - include: certificate-selfsigned.yml
   when: hardenwebserver_cert is defined and hardenwebserver_cert == 'selfsigned'
 
-- name: nginx https configuration
-  template: src=https-only
-    dest=/etc/nginx/sites-enabled/https
-    owner=0 group=0 mode=0644
-  notify:
-    - restart nginx
+- block:
+    - name: nginx https configuration
+      template: src=https-only
+        dest={{ apache_sitedir }}/https
+        owner=0 group=0 mode=0644
+      notify:
+        - restart nginx
+    - name: enable https
+      file: src="{{ apache_sitedir }}/https" dest="/etc/nginx/sites-enabled/https" state=link
+      notify:
+        - restart nginx
   when: hardenwebserver_disable_http is defined and hardenwebserver_disable_http
-- name: nginx remove default site
-  file: dest=/etc/nginx/sites-enabled/default
-    state=absent
-  notify:
-    - restart nginx
-  when: hardenwebserver_disable_http is defined and hardenwebserver_disable_http
+
+- name: download nxtool.py to help whitelisting
+  get_url: url=https://raw.githubusercontent.com/nbs-system/naxsi/master/nxapi/nxtool.py dest=/usr/local/bin/nxtool.py mode=0755 sha256sum='a4d4248f755260458b9771727ac6dd2d910f06c2a8b30ec8c4fbbd51ecbc1d39'
+
+- block:
+    - name: debian | nginx remove default site
+      file: dest=/etc/nginx/sites-enabled/default
+        state=absent
+      notify:
+        - restart nginx
+      when: hardenwebserver_disable_http is defined and hardenwebserver_disable_http
+## https://www.digitalocean.com/community/tutorials/how-to-install-and-configure-naxsi-on-ubuntu-14-04
+    - name: debian | nginx enable naxsi
+      replace: "dest={{ apacheconf }} regexp='^       #include /etc/nginx/naxsi_core.rules' replace='       include /etc/nginx/naxsi_core.rules'"
+  when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
 
