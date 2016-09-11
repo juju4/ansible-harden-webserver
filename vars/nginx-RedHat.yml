@@ -1,0 +1,13 @@
+---
+
+www_user: nginx
+apache_svc: nginx
+apache_confdir: /etc/nginx/default.d
+apache_sitedir: /etc/nginx/conf.d
+#apachesslconf: /etc/apache2/sites-enabled/default-ssl.conf
+hardenwebserver_nginx_naxsi: false
+
+hardenwebserver_packages:
+    - python-passlib
+    - nginx
+

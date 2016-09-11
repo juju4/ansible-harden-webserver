@@ -1,19 +1,18 @@
 [![Build Status](https://travis-ci.org/juju4/ansible-harden-webserver.svg?branch=master)](https://travis-ci.org/juju4/ansible-harden-webserver)
 # harden-webserver ansible role
 
-A simple ansible role to harden webserver.
+Ansible role to harden webserver.
 Currently mostly focus on apache2 and nginx
 
 ## Requirements & Dependencies
 
 ### Ansible
 It was tested on the following versions:
- * 1.9
  * 2.0
 
 ### Operating systems
 
-Tested with vagrant on Ubuntu 14.04, Kitchen test with trusty and centos7
+Tested with vagrant on Ubuntu 14.04, Kitchen test with trusty, xenial and centos7
 
 ## Example Playbook
 

@@ -21,7 +21,7 @@
         - reqtimeout
       notify:
         - restart apache
-    
+
     - name: Enabled extra security - apache2.conf
       replace: dest="{{ apacheetc }}/apache2.conf" regexp="{{ item.re }}" replace="{{ item.n }}" backup=yes
       with_items:
@@ -29,7 +29,14 @@
         - { re: '^\tOptions Indexes FollowSymLinks', n: '\tOptions Indexes SymLinksIfOwnerMatch' }
       notify:
         - restart apache
-    
+
+    - name: HTTPoxy vuln mitigation - 201607
+      lineinfile: dest="{{ apacheetc }}/apache2.conf" regexp="{{ item.re }}" line="{{ item.n }}" backup=yes
+      with_items:
+        - { re: '^RequestHeader unset Proxy early', n: 'RequestHeader unset Proxy early' }
+      notify:
+        - restart apache
+
     ## Note: commented headers can break some apps like nagios
     - name: Enabled extra security headers - security.conf
       replace: dest="{{ hardenwebserver_apachesecurityconf }}" regexp="{{ item.re }}" replace="{{ item.n }}" backup=yes
@@ -43,7 +50,7 @@
     #    - { re: '^#Header set X-Frame-Options: "sameorigin"', n: 'Header set X-Frame-Options: "deny"' }
       notify:
         - restart apache
-    
+
     ## https://www.owasp.org/index.php/List_of_useful_HTTP_headers
     - name: Enabled extra security headers
       lineinfile: dest="{{ hardenwebserver_apachesecurityconf }}" line="{{ item.n }}" backup=yes
@@ -67,6 +74,8 @@
         - 'ServerSignature Off'
         - 'Header set X-Content-Type-Options: "nosniff"'
         - 'Header set X-Frame-Options: "sameorigin"'
+## HTTPoxy, 201607
+        - 'RequestHeader unset Proxy early'
     #    - 'Header set X-Frame-Options: "deny"'
     ## FIXME! problem w escaping ;
     #    - 'Header set Strict-Transport-Security "max-age=16070400; includeSubDomains"'

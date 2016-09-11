@@ -2,16 +2,12 @@
 
 - name: apt | apache-security packages install
   apt: name={{item}} state=present
-  with_items:
-    - python-passlib
-    - apache2
+  with_items: "{{ hardenwebserver_packages }}"
   when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
 
 - name: yum | apache-security packages install
   yum: name={{item}} state=present
-  with_items:
-    - python-passlib
-    - httpd
+  with_items: "{{ hardenwebserver_packages }}"
   when: ansible_os_family == "RedHat" or ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
 
 - include: apache-security.yml

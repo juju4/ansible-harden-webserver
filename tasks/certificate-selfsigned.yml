@@ -6,19 +6,10 @@
     - ssl-cert
   when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
 
-- set_fact:
-    ssl_user: ssl-cert
-    ssl_privatedir: /etc/ssl/private
-  when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
-- set_fact:
-    ssl_user: root
-    ssl_privatedir: /etc/ssl
-  when: ansible_os_family == "RedHat" or ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
-
-- stat: path=/etc/ssl/{{ ansible_fqdn }}.crt
+- stat: path={{ ssl_dir }}/{{ ansible_fqdn }}.crt
   register: localsslcert
 - name: Generale SSL self-signed certificate
-  command: openssl req -x509 -nodes -sha256 -days {{ hardenwebserver_certduration }} -newkey rsa:2048 -subj "{{ hardenwebserver_certinfo }}/CN={{ certificate_cn }}" -keyout {{ ssl_privatedir }}/{{ ansible_fqdn }}.key -out /etc/ssl/{{ ansible_fqdn }}.crt
+  command: openssl req -x509 -nodes -sha256 -days {{ hardenwebserver_certduration }} -newkey rsa:2048 -subj "{{ hardenwebserver_certinfo }}/CN={{ certificate_cn }}" -keyout {{ ssl_privatedir }}/{{ ansible_fqdn }}.key -out {{ ssl_dir }}/{{ ansible_fqdn }}.crt
   when: not localsslcert.stat.exists
 - file: "path={{ ssl_privatedir }}/{{ ansible_fqdn }}.key owner=root group={{ ssl_user }} mode=0440"
 
