@@ -1,6 +1,0 @@
----
-
-- hosts: all
-  roles:
-    - harden-webserver
-

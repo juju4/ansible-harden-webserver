@@ -1,8 +1,0 @@
----
-
-- hosts: all
-  vars:
-    - hardenwebserver_type: nginx
-  roles:
-    - harden-webserver
-
