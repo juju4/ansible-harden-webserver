@@ -1,3 +1,6 @@
+[![No Maintenance Intended](http://unmaintained.tech/badge.svg)](http://unmaintained.tech/)
+# DEPRECATED -> use https://travis-ci.org/juju4/ansible-harden-apache or https://travis-ci.org/juju4/ansible-harden-nginx
+
 [![Build Status](https://travis-ci.org/juju4/ansible-harden-webserver.svg?branch=master)](https://travis-ci.org/juju4/ansible-harden-webserver)
 # harden-webserver ansible role
 
